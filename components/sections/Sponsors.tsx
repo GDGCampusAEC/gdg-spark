@@ -11,7 +11,7 @@ export function Sponsors() {
     <section id="sponsors" className="py-24 bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
       <div className="container mx-auto px-6">
         <SectionHeading
-          title="Our Sponsors & Partners"
+        title="Our Sponsors & Speakers"
           subtitle="Empowering innovation through community support."
         />
         

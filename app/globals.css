@@ -1,5 +1,4 @@
-/* Updated: 2025-12-28T08:46:02.961Z */
-/* Updated: 2025-12-27T16:57:07.850Z */
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -128,5 +127,16 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@keyframes gradient-shift {
+  0%, 100% {
+    transform: translateX(-10%) translateY(-10%) scale(1.2);
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    transform: translateX(10%) translateY(10%) scale(1.2);
+    filter: hue-rotate(20deg);
   }
 }

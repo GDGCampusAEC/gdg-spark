@@ -2,6 +2,7 @@
 
 import { EVENT_DETAILS } from "@/lib/constants";
 import { Github, Twitter, Linkedin, Instagram, Mail ,Globe} from "lucide-react";
+import Image from "next/image";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -10,11 +11,18 @@ export function Footer() {
     <footer className="bg-white dark:bg-black py-16 px-6 border-t border-zinc-100 dark:border-zinc-800">
       <div className="container mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-center gap-12 mb-12">
-          <div className="text-center md:text-left">
-            <h2 className="text-2xl font-black tracking-tight mb-2">
-              <span className="text-google-blue">GDG</span> On Campus
-            </h2>
-            <p className="text-zinc-500 font-medium">Asansol Engineering College</p>
+          <div className="flex items-center justify-center">
+          <Image
+            src="/gdg_logo.jpeg"
+            alt="GDG Spark Logo"
+            width={70}
+            height={50}
+            className="cursor-pointer w-18 h-auto"
+          />
+              <div className="ml-3 flex flex-col flex-1 justify-center leading-0.5 h-full">
+                <p className=" text-lg">Google Developer Groups</p>
+                <p className="text-base text-gray-800">On Campus Asansol Engineering College</p>
+              </div>
           </div>
 
           <div className="flex flex-col items-center gap-6">

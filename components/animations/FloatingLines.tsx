@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Scene,
   OrthographicCamera,
@@ -637,6 +637,7 @@ export default function FloatingLines({
   const currentInfluenceRef = useRef<number>(0);
   const targetParallaxRef = useRef<Vector2>(new Vector2(0, 0));
   const currentParallaxRef = useRef<Vector2>(new Vector2(0, 0));
+  const [webGLSupported, setWebGLSupported] = useState(true);
 
   const getLineCount = (waveType: 'top' | 'middle' | 'bottom'): number => {
     if (typeof lineCount === 'number') return lineCount;
@@ -663,17 +664,26 @@ export default function FloatingLines({
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const scene = new Scene();
+    let renderer: WebGLRenderer | null = null;
 
-    const camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    camera.position.z = 1;
+    try {
+      const scene = new Scene();
 
-    const renderer = new WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setClearColor(0x000000, 0); 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.domElement.style.width = '100%';
-    renderer.domElement.style.height = '100%';
-    containerRef.current.appendChild(renderer.domElement);
+      const camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
+      camera.position.z = 1;
+
+      // Try to create WebGL renderer with error handling
+      renderer = new WebGLRenderer({ antialias: true, alpha: true });
+      
+      if (!renderer || !renderer.getContext()) {
+        throw new Error('WebGL context not available');
+      }
+
+      renderer.setClearColor(0x000000, 0); 
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.domElement.style.width = '100%';
+      renderer.domElement.style.height = '100%';
+      containerRef.current.appendChild(renderer.domElement);
 
     const uniforms = {
       iTime: { value: 0 },
@@ -749,6 +759,7 @@ export default function FloatingLines({
     const clock = new Clock();
 
     const setSize = () => {
+      if (!renderer) return;
       const el = containerRef.current!;
       const width = el.clientWidth || 1;
       const height = el.clientHeight || 1;
@@ -769,6 +780,7 @@ export default function FloatingLines({
     }
 
     const handlePointerMove = (event: PointerEvent) => {
+      if (!renderer) return;
       const rect = renderer.domElement.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
@@ -795,46 +807,66 @@ export default function FloatingLines({
       renderer.domElement.addEventListener('pointerleave', handlePointerLeave);
     }
 
-    let raf = 0;
-    const renderLoop = () => {
-      uniforms.iTime.value = clock.getElapsedTime();
+      let raf = 0;
+      const renderLoop = () => {
+        uniforms.iTime.value = clock.getElapsedTime();
 
-      if (interactive) {
-        currentMouseRef.current.lerp(targetMouseRef.current, mouseDamping);
-        uniforms.iMouse.value.copy(currentMouseRef.current);
+        if (interactive) {
+          currentMouseRef.current.lerp(targetMouseRef.current, mouseDamping);
+          uniforms.iMouse.value.copy(currentMouseRef.current);
 
-        currentInfluenceRef.current += (targetInfluenceRef.current - currentInfluenceRef.current) * mouseDamping;
-        uniforms.bendInfluence.value = currentInfluenceRef.current;
+          currentInfluenceRef.current += (targetInfluenceRef.current - currentInfluenceRef.current) * mouseDamping;
+          uniforms.bendInfluence.value = currentInfluenceRef.current;
+        }
+
+        if (parallax) {
+          currentParallaxRef.current.lerp(targetParallaxRef.current, mouseDamping);
+          uniforms.parallaxOffset.value.copy(currentParallaxRef.current);
+        }
+
+        renderer!.render(scene, camera);
+        raf = requestAnimationFrame(renderLoop);
+      };
+      renderLoop();
+
+      return () => {
+        cancelAnimationFrame(raf);
+        if (ro) {
+          ro.disconnect();
+        }
+
+        if (interactive && renderer) {
+          renderer.domElement.removeEventListener('pointermove', handlePointerMove);
+          renderer.domElement.removeEventListener('pointerleave', handlePointerLeave);
+        }
+
+        if (renderer) {
+          geometry.dispose();
+          material.dispose();
+          renderer.dispose();
+          if (renderer.domElement.parentElement) {
+            renderer.domElement.parentElement.removeChild(renderer.domElement);
+          }
+        }
+      };
+    } catch (error) {
+      console.warn('WebGL not supported, falling back to CSS gradient:', error);
+      setWebGLSupported(false);
+      
+      // Cleanup if renderer was partially created
+      if (renderer) {
+        try {
+          renderer.dispose();
+          if (renderer.domElement.parentElement) {
+            renderer.domElement.parentElement.removeChild(renderer.domElement);
+          }
+        } catch {
+          // Ignore cleanup errors
+        }
       }
-
-      if (parallax) {
-        currentParallaxRef.current.lerp(targetParallaxRef.current, mouseDamping);
-        uniforms.parallaxOffset.value.copy(currentParallaxRef.current);
-      }
-
-      renderer.render(scene, camera);
-      raf = requestAnimationFrame(renderLoop);
-    };
-    renderLoop();
-
-    return () => {
-      cancelAnimationFrame(raf);
-      if (ro && containerRef.current) {
-        ro.disconnect();
-      }
-
-      if (interactive) {
-        renderer.domElement.removeEventListener('pointermove', handlePointerMove);
-        renderer.domElement.removeEventListener('pointerleave', handlePointerLeave);
-      }
-
-      geometry.dispose();
-      material.dispose();
-      renderer.dispose();
-      if (renderer.domElement.parentElement) {
-        renderer.domElement.parentElement.removeChild(renderer.domElement);
-      }
-    };
+      
+      return () => {};
+    }
   }, [
     linesGradient,
     enabledWaves,
@@ -859,6 +891,18 @@ export default function FloatingLines({
       style={{
         mixBlendMode: mixBlendMode
       }}
-    />
+    >
+      {!webGLSupported && (
+        <div 
+          className="absolute inset-0 w-full h-full opacity-30"
+          style={{
+            background: linesGradient && linesGradient.length > 0
+              ? `linear-gradient(135deg, ${linesGradient.join(', ')})`
+              : 'linear-gradient(135deg, #FBBC05, #EA4335, #4285F4, #34A853)',
+            animation: 'gradient-shift 15s ease infinite',
+          }}
+        />
+      )}
+    </div>
   );
 }

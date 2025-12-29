@@ -80,7 +80,7 @@ export const EVENT_DETAILS = {
     { name: "LinkedIn", logo: "https://upload.wikimedia.org/wikipedia/commons/0/01/LinkedIn_Logo.svg" },
     { name: "D.E. Shaw", logo: "https://upload.wikimedia.org/wikipedia/commons/6/60/D._E._Shaw_%26_Co._logo.png?20211009044800" },
     { name: "Hack2Skill", logo: "/H2S_Gradient_Logo.png" },
-    // { name: "Heva AI", logo: "/next.svg" },
+    { name: "Heva AI", logo: "/hevaAI.png" },
     { name: "AlgoZenith", logo: "/algozenith.png" },
   ],
   contact: {
